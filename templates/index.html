@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VirusTotal Bulk Scanner</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+        }
+        .btn {
+            padding: 8px 15px;
+            margin-top: 10px;
+            cursor: pointer;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .green { background-color: #d4edda; }
+        .orange { background-color: #fff3cd; }
+        .red { background-color: #f8d7da; }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .results-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .table-wrapper {
+            flex: 2;
+        }
+
+        .chart-wrapper {
+            flex: 1;
+            max-width: 350px;
+        }
+
+        .switch-labels {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 70px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0;
+            right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px; width: 26px;
+            left: 4px; bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #007bff;
+        }
+        input:checked + .slider:before {
+            transform: translateX(36px);
+        }
+    </style>
+</head>
+<body>
+    <h1>🔎 VirusTotal Bulk Scanner</h1>
+    <form method="POST" action="/scan" enctype="multipart/form-data">
+        <div class="switch-labels">
+            <label>Hashes</label>
+            <label class="switch">
+                <input type="checkbox" id="inputToggle" name="input_type" value="ip" onchange="toggleInputType(this)" {% if input_type == 'ip' %}checked{% endif %}>
+                <span class="slider"></span>
+            </label>
+            <label>IP</label>
+        </div>
+        <input type="hidden" id="hiddenType" name="input_type" value="{{ input_type }}">
+
+        <label>Paste Hashes or IPs (one per line):</label><br>
+        <textarea name="input_data"></textarea><br>
+
+        <label>OR Upload a .txt or .csv file:</label><br>
+        <input type="file" name="file_input"><br><br>
+
+        <button class="btn" type="submit">🔍 Scan</button>
+    </form>
+
+    {% if results %}
+        <h2>Scan Results</h2>
+
+        <label>
+            <input type="checkbox" id="includeChart"> Include Chart
+        </label>
+        <button class="btn" onclick="handleDownload(event)">⬇ Download Results</button>
+        <br><br>
+
+        <div class="results-container">
+            <div class="table-wrapper">
+                <table>
+                    <tr>
+                        <th>ID</th>
+                        <th>Malicious</th>
+                        <th>Suspicious</th>
+                        {% if input_type == 'ip' %}
+                            <th>Reputation</th>
+                            <th>Country</th>
+                            <th>City</th>
+                            <th>ASN</th>
+                            <th>Domain</th>
+                        {% else %}
+                            <th>Harmless</th>
+                        {% endif %}
+                        <th>Status</th>
+                    </tr>
+                    {% for r in results %}
+                    {% set severity = "green" %}
+                    {% if r.malicious and r.malicious|int >= 10 %}
+                        {% set severity = "red" %}
+                    {% elif r.malicious and r.malicious|int > 0 %}
+                        {% set severity = "orange" %}
+                    {% endif %}
+                    <tr class="{{ severity }}">
+                        <td>{{ r.id }}</td>
+                        <td>{{ r.malicious or '-' }}</td>
+                        <td>{{ r.suspicious or '-' }}</td>
+                        {% if input_type == 'ip' %}
+                            <td>{{ r.reputation or '-' }}</td>
+                            <td>{{ r.country or '-' }}</td>
+                            <td>{{ r.city or '-' }}</td>
+                            <td>{{ r.asn or '-' }}</td>
+                            <td>{{ r.domain or '-' }}</td>
+                        {% else %}
+                            <td>{{ r.harmless or '-' }}</td>
+                        {% endif %}
+                        <td>{{ r.error or 'OK' }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="chart" width="300" height="300"></canvas>
+            </div>
+        </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    function toggleInputType(checkbox) {
+        document.getElementById('hiddenType').value = checkbox.checked ? 'ip' : 'hash';
+    }
+
+    function handleDownload(event) {
+        event.preventDefault();
+
+        // Download CSV
+        const csvLink = document.createElement("a");
+        csvLink.href = "/download";
+        csvLink.download = "vt_results.csv";
+        csvLink.click();
+
+        // Download chart if checkbox checked
+        const includeChart = document.getElementById("includeChart").checked;
+        if (includeChart) {
+            const canvas = document.getElementById("chart");
+            const image = canvas.toDataURL("image/png");
+            const link = document.createElement("a");
+            link.href = image;
+            link.download = "vt_chart.png";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+
+    {% if results %}
+        const results = {{ results|tojson }};
+        let malicious = 0, suspicious = 0, harmless = 0;
+
+        results.forEach(r => {
+            malicious += parseInt(r.malicious || 0);
+            suspicious += parseInt(r.suspicious || 0);
+            harmless += parseInt(r.harmless || 0);
+        });
+
+        const ctx = document.getElementById('chart').getContext('2d');
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['Malicious', 'Suspicious', 'Harmless'],
+                datasets: [{
+                    data: [malicious, suspicious, harmless],
+                    backgroundColor: ['#dc3545', '#ffc107', '#28a745']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    {% endif %}
+    </script>
+</body>
+</html>
