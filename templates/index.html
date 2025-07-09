@@ -95,7 +95,7 @@
     </style>
 </head>
 <body>
-    <h1>🔎 VirusTotal Bulk Scanner By Analyst11</h1>
+    <h1>🔎 Bulk IOCs Scanner</h1>
     <form method="POST" action="/scan" enctype="multipart/form-data">
         <div class="switch-labels">
             <label>Hashes</label>
@@ -107,8 +107,10 @@
         </div>
         <input type="hidden" id="hiddenType" name="input_type" value="{{ input_type }}">
 
-        <label>Paste Hashes or IPs (one per line):</label><br>
+        <label>Paste IPs, Hashes or URLs (one per line):</label><br>
         <textarea name="input_data"></textarea><br>
+
+        <br>
 
         <label>OR Upload a .txt or .csv file:</label><br>
         <input type="file" name="file_input"><br><br>
@@ -121,7 +123,7 @@
 
         <label>
             <input type="checkbox" id="includeChart"> Include Chart
-        </label>
+        </label><br>
         <button class="btn" onclick="handleDownload(event)">⬇ Download Results</button>
         <br><br>
 
@@ -233,5 +235,14 @@
         });
     {% endif %}
     </script>
+
+<footer style="background-color: #f1f1f1; padding: 20px 0; text-align: center; font-family: Arial, sans-serif; border-top: 1px solid #ccc;">
+  <div>
+    <p style="margin: 5px 0;">&copy; Cyber Security Analyst. All rights reserved.</p>
+    Contact: <a href="mailto:virustotalapikey7@gmail.com">ADMIN</a>
+  </div>
+</footer>
+
+
 </body>
 </html>
